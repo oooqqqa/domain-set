@@ -1,0 +1,21 @@
+{
+  "lists": {
+    "apple-china": {
+      "output_count": 165,
+      "output_file": "apple-china.txt",
+      "output_sha256": "fec33b7dbf4464fccb9c71acb80641022ba049527cad8c05525d9c53974c0c20",
+      "source_rule_count": 165,
+      "source_sha256": "5b85e3febd8067233d86483299f257806428b5d520c65e3da3c0ce9465568f64",
+      "upstream_file": "apple.china.conf"
+    },
+    "china": {
+      "output_count": 109455,
+      "output_file": "china.txt",
+      "output_sha256": "b15a99a3467b42557a548183d2f5ac71535fed414fd5d9d7752368547d267dc9",
+      "source_rule_count": 109455,
+      "source_sha256": "3780aa1aa97dffae010998ce0f320351c4646a4bd4a66327f6f99393f1ae7e22",
+      "upstream_file": "accelerated-domains.china.conf"
+    }
+  },
+  "upstream": "felixonmars/dnsmasq-china-list"
+}
