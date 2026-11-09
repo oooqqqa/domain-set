@@ -1,6 +1,8 @@
 # dnsmasq-china-list → Surge DOMAIN-SET
 
-Convert the [felixonmars/dnsmasq-china-list](https://github.com/felixonmars/dnsmasq-china-list) China and Apple China DNS lists into native Surge DOMAIN-SET files. This repository only builds domain lists; Surge itself handles DNS matching and resolution.
+Surge DOMAIN-SET files generated from the China and Apple China DNS lists in [felixonmars/dnsmasq-china-list](https://github.com/felixonmars/dnsmasq-china-list).
+
+The converter extracts domain suffixes from dnsmasq rules. DNS servers are configured separately in Surge; upstream server IP addresses are not included in the generated lists.
 
 ## Outputs
 
@@ -10,11 +12,9 @@ Convert the [felixonmars/dnsmasq-china-list](https://github.com/felixonmars/dnsm
 | [domains/apple-china.txt](domains/apple-china.txt) | `apple.china.conf` |
 | [domains/report.json](domains/report.json) | Source/output SHA-256 checksums and entry counts |
 
-The generated files first appear after a successful GitHub Actions run.
-
 ## Surge configuration
 
-Merge these lines into your existing `[Host]` section (or see [surge-remote.conf](domains/surge-remote.conf)):
+The following entries configure DNS servers for the domain lists in Surge's `[Host]` section. A configuration example is also available in [domains/surge-remote.conf](domains/surge-remote.conf).
 
 ```ini
 [Host]
@@ -22,35 +22,57 @@ DOMAIN-SET:https://raw.githubusercontent.com/oooqqqa/domain-set/main/domains/app
 DOMAIN-SET:https://raw.githubusercontent.com/oooqqqa/domain-set/main/domains/china.txt = server:https://223.5.5.5/dns-query
 ```
 
-The DNS addresses are examples, and the original dnsmasq server IPs are **not** carried into the output. Surge uses the first matching `[Host]` entry, so place more-specific overrides first. Apple's mainland CDN routing is optional because it can be problematic with some ISPs.
+The example uses `https://223.5.5.5/dns-query` as the DNS server. The Apple China entry is optional.
 
-## Conversion and safety
+## Conversion
 
-- Converts `server=/example.com/114.114.114.114` to `.example.com` (apex **and** subdomains).
-- Parses only the expected dnsmasq `server=/.../IP` syntax; invalid input fails rather than silently dropping rules.
-- Deduplicates, lowercases, sorts, and preserves Punycode labels.
-- Downloads and validates **both** sources before writing, with minimum size, shrink, and growth safeguards.
-- Writes deterministic files plus SHA-256 report; unchanged data produces no output changes.
+- Converts `server=/example.com/114.114.114.114` to `.example.com`, covering the domain and its subdomains.
+- Accepts dnsmasq `server=/.../IP` rules, blank lines, and comment lines. Unsupported syntax or invalid domains cause the build to fail.
+- Lowercases, deduplicates, and sorts domain entries while preserving Punycode labels.
+- Parses and validates both source lists before modifying output files.
+- Checks minimum entry counts and changes relative to the previous report.
+- Records source and output SHA-256 checksums in `report.json`. Identical inputs produce identical outputs, without generation timestamps.
 
 ## Local usage
 
-Python 3.9+; no third-party packages required:
+Requires Python 3.9 or later and uses only the standard library.
+
+Download and convert both upstream lists:
 
 ```sh
-python3 -m unittest -v
 python3 convert.py --download
 ```
 
-Or use downloaded files:
+Convert local source files:
 
 ```sh
 python3 convert.py --china /path/to/accelerated-domains.china.conf --apple /path/to/apple.china.conf
 ```
 
-Output goes to `domains/` by default; `--output`, `--min-china`, `--min-apple`, `--max-drop`, `--max-growth` allow controlled adjustments. Do not relax safeguards solely to make a failed update pass.
+| Option | Default | Description |
+| --- | --- | --- |
+| `--output` | `domains` | Output directory |
+| `--min-china` | `50000` | Minimum China list entry count |
+| `--min-apple` | `50` | Minimum Apple China list entry count |
+| `--max-drop` | `0.20` | Maximum proportional decrease from the previous count |
+| `--max-growth` | `0.50` | Maximum proportional increase from the previous count |
 
-[GitHub Actions](.github/workflows/update.yml) checks updates every Monday at 10:27 Beijing time, and supports manual triggers. The repository must permit Actions to write contents in **Settings → Actions → General → Workflow permissions**.
+Change limits apply when the output directory contains a previous report with a positive entry count for the list.
+
+Run the test suite:
+
+```sh
+python3 -m unittest -v
+```
+
+## Automated updates
+
+The [update workflow](.github/workflows/update.yml) is scheduled for Mondays at 02:27 UTC (10:27 Beijing time). It also supports manual runs and runs on pushes to `main` that modify the converter, tests, or workflow.
+
+Each run executes the tests, downloads and validates both upstream lists, and commits changed outputs to the repository's default branch. The workflow requests `contents: write` permission to publish updates.
 
 ## Source and license
 
-Upstream: [felixonmars/dnsmasq-china-list](https://github.com/felixonmars/dnsmasq-china-list), licensed under [WTFPL v2](https://github.com/felixonmars/dnsmasq-china-list/blob/master/LICENSE). Conversion code: [GPL-3.0](LICENSE), matching [oooqqqa/rule-set](https://github.com/oooqqqa/rule-set).
+Domain data is sourced from [felixonmars/dnsmasq-china-list](https://github.com/felixonmars/dnsmasq-china-list); see the [upstream license](https://github.com/felixonmars/dnsmasq-china-list/blob/master/LICENSE).
+
+The conversion code is licensed under [GPL-3.0](LICENSE).
